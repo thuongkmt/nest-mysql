@@ -11,6 +11,6 @@ export class UserService {
   ) {}
 
   findByUsername(id: number): Promise<UserEntity | null> {
-    return this.userRepository.findOne({ id: id });
+    return this.userRepository.findOne({ where: { id } });
   }
 }
