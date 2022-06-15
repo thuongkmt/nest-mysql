@@ -1,6 +1,5 @@
 import { Logger } from '@nestjs/common';
 import {
-  MessageBody,
   OnGatewayConnection,
   OnGatewayDisconnect,
   OnGatewayInit,
@@ -8,14 +7,22 @@ import {
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
-import { json } from 'body-parser';
 import { Socket, Server } from 'socket.io';
+import { ConnectedUserService } from 'src/connected-user/connected-user.service';
+import { User } from 'src/typeorm';
 import { PayloadMessage } from 'src/types/payload.message';
+import { IUser } from 'src/types/user.interface';
+import { UserService } from 'src/users/user.service';
 
 @WebSocketGateway({ cors: '*' })
 export class ChatGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
 {
+  public constructor(
+    private connectedUserService: ConnectedUserService,
+    private userService: UserService,
+  ) {}
+
   @WebSocketServer() server: Server;
   private logger: Logger = new Logger('ChatGateway');
 
@@ -35,8 +42,13 @@ export class ChatGateway
     this.logger.log('Init');
   }
 
-  handleConnection(client: any, ..._args: any[]) {
-    this.logger.log(`Client connected: ${client.id}`);
+  async handleConnection(socket: Socket, ..._args: any[]) {
+    this.logger.log(`Client connected: ${socket.id}`);
+    const userUat: User = await this.userService.findByUsername(1);
+    await this.connectedUserService.create({
+      socketId: socket.id,
+      user: userUat,
+    });
   }
 
   handleDisconnect(client: any) {
