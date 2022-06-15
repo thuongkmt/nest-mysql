@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { ConnectedUser } from 'src/typeorm/ConnectedUser';
 import { User } from 'src/typeorm/User';
 import { IConnectedUser } from 'src/types/connected-user.interface';
-import { Repository } from 'typeorm';
+import { DeleteResult, Repository } from 'typeorm';
 
 @Injectable()
 export class ConnectedUserService {
@@ -21,5 +21,9 @@ export class ConnectedUserService {
       relations: ['user'],
       where: { user: { id: user.id } },
     });
+  }
+
+  async deleteConnectedUser(socketId: string): Promise<DeleteResult> {
+    return this.connectedUserRepository.delete( {socketId: socketId} );
   }
 }
