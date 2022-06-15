@@ -1,4 +1,4 @@
 export class PayloadMessage {
-  username: string;
+  receiverId: string;
   message: string;
 }

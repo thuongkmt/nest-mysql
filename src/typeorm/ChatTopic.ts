@@ -12,7 +12,9 @@ export class ChatTopic {
   @Column()
   topic: string;
 
-  @Column()
+  @Column({
+    default: '',
+  })
   password: string;
 
   @OneToMany(() => Message, (message) => message.chatTopic)

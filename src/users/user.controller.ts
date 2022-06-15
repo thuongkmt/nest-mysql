@@ -8,6 +8,6 @@ export class UserController {
   @Get(':id')
   getInactiveUser(@Param('id', ParseIntPipe) id: number): Promise<User> {
     console.log(`id: ${id}`);
-    return this.userService.findByUsername(id);
+    return this.userService.findById(id);
   }
 }

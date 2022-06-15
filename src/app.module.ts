@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { UsersModule } from './users/users.module';
 import { GatewayModule } from './gateway/gateway.module';
 import { ConnectedUserModule } from './connected-user/connected-user.module';
+import { ChatTopicModule } from './chat-topic/chat-topic.module';
+import { UserChattopicModule } from './user-chattopic/user-chattopic.module';
 import entities from './typeorm';
 
 @Module({
@@ -22,8 +22,8 @@ import entities from './typeorm';
     UsersModule,
     GatewayModule,
     ConnectedUserModule,
+    ChatTopicModule,
+    UserChattopicModule,
   ],
-  controllers: [AppController],
-  providers: [AppService],
 })
 export class AppModule {}

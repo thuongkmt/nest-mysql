@@ -1,4 +1,4 @@
-import { ExecutionContext, Logger } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import {
   OnGatewayConnection,
   OnGatewayDisconnect,
@@ -8,11 +8,13 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import { Socket, Server } from 'socket.io';
+import { ChattopicService } from 'src/chat-topic/chat-topic.service';
 import { ConnectedUserService } from 'src/connected-user/connected-user.service';
-import { User } from 'src/typeorm';
+import { ChatTopic, ConnectedUser, User, UserChatTopic } from 'src/typeorm';
 import { PayloadMessage } from 'src/types/payload.message';
+import { PayloadRoom } from 'src/types/payload.room';
+import { UserChattopicService } from 'src/user-chattopic/user-chattopic.service';
 import { UserService } from 'src/users/user.service';
-import { DeleteResult } from 'typeorm';
 
 @WebSocketGateway({ cors: '*' })
 export class ChatGateway
@@ -21,31 +23,67 @@ export class ChatGateway
   public constructor(
     private connectedUserService: ConnectedUserService,
     private userService: UserService,
+    private chatTopicService: ChattopicService,
+    private userChatTopicService: UserChattopicService,
   ) {}
 
   @WebSocketServer() server: Server;
   private logger: Logger = new Logger('ChatGateway');
 
-  @SubscribeMessage('msgToServer')
-  async handleMessage(client: Socket, payload: PayloadMessage): Promise<void> {
-    //this.logger.log(`message sent from ${client.id} with payload ${payload}`);
-    this.logger.log(client.handshake.headers);
-    //1. get sender userId from headers
-    this.logger.log(payload);
-    this.logger.log(payload.username);
-    this.logger.log(payload.message);
-    //2. get receiver from payload
-    this.server.sockets.emit('msgToClient', payload);
-  }
-
   async afterInit(_server: any) {
     this.logger.log('Init');
+  }
+
+  @SubscribeMessage('send_message')
+  async handleMessage(client: Socket, payload: PayloadMessage): Promise<void> {
+    //check user in the ConnectedUser table
+    const socketId: string = client.id;
+    const currentConnectedUserId = await this.checkConnectedUser(socketId);
+    //check payload
+    this.logger.log(`${payload.receiverId}: ${payload.message}`);
+    //check ChatTopic whether or not existed?
+    if (currentConnectedUserId && payload.receiverId) {
+    }
+  }
+
+  @SubscribeMessage('create_room')
+  async handleRoomCreation(
+    client: Socket,
+    payload: PayloadRoom,
+  ): Promise<void> {
+    //check user in the ConnectedUser table
+    const socketId: string = client.id;
+    const currentConnectedUserId = await this.checkConnectedUser(socketId);
+    if (currentConnectedUserId) {
+      //create ChatTopic
+      const userIds = payload.userIds.toString().split(',');
+      let chatTopicName = '';
+      userIds.forEach((x) => {
+        chatTopicName += x;
+      });
+      const chatTopic = new ChatTopic();
+      chatTopic.topic = chatTopicName;
+      const chatTopicResult = await this.chatTopicService.create(chatTopic);
+      //create user in the chatTopic
+      if (chatTopicResult) {
+        for (const userId of userIds) {
+          const user = await this.userService.findById(parseInt(userId));
+          const userChatTopic = new UserChatTopic();
+          userChatTopic.chatTopic = chatTopicResult;
+          userChatTopic.user = user;
+          await this.userChatTopicService.create(userChatTopic);
+        }
+      }
+    }
+    this.server.to(`${socketId}`).emit('hey', 'You are created new chat-topic');
   }
 
   async handleConnection(socket: Socket, ..._args: any[]) {
     this.logger.log(`Client connected: ${socket.id}`);
     try {
-      const userUat: User = await this.userService.findByUsername(1);
+      //TODO: Will get user from JWT
+      //this.logger.log(client.handshake.headers);
+      const userUat: User = await this.userService.findById(1);
       await this.connectedUserService.create({
         socketId: socket.id,
         user: userUat,
@@ -57,8 +95,18 @@ export class ChatGateway
 
   async handleDisconnect(socket: Socket) {
     this.logger.log(`Client disconnected: ${socket.id}`);
-    const data: DeleteResult =
-      await this.connectedUserService.deleteConnectedUser(socket.id);
+    const data = await this.connectedUserService.deleteConnectedUser(socket.id);
     this.logger.log(`${JSON.stringify(data)}`);
+  }
+
+  private async checkConnectedUser(socketId: string): Promise<number> {
+    const currentConnectedUser =
+      await this.connectedUserService.findUserBySocket(socketId);
+    const currentConnectedUserId = currentConnectedUser.user.id;
+    this.logger.log(
+      `CurrentConnectedUser: ${JSON.stringify(currentConnectedUserId)}`,
+    );
+
+    return currentConnectedUserId;
   }
 }

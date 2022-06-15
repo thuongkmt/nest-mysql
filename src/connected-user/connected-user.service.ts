@@ -23,7 +23,14 @@ export class ConnectedUserService {
     });
   }
 
+  async findUserBySocket(socketId: string): Promise<ConnectedUser> {
+    return this.connectedUserRepository.findOne({
+      relations: ['user'],
+      where: { socketId: socketId },
+    });
+  }
+
   async deleteConnectedUser(socketId: string): Promise<DeleteResult> {
-    return this.connectedUserRepository.delete( {socketId: socketId} );
+    return this.connectedUserRepository.delete({ socketId: socketId });
   }
 }
