@@ -1,4 +1,4 @@
 export class PayloadMessage {
-  receiverId: string;
+  chatTopic: string;
   message: string;
 }

@@ -40,10 +40,23 @@ export class ChatGateway
     const socketId: string = client.id;
     const currentConnectedUserId = await this.checkConnectedUser(socketId);
     //check payload
-    this.logger.log(`${payload.receiverId}: ${payload.message}`);
+    this.logger.log(`${payload.chatTopic}: ${payload.message}`);
     //check ChatTopic whether or not existed?
-    if (currentConnectedUserId && payload.receiverId) {
+    if (currentConnectedUserId && payload.chatTopic) {
+      this.server
+        .to(payload.chatTopic)
+        .emit('receive_message', payload.message);
     }
+  }
+
+  @SubscribeMessage('join_room')
+  async handleJoinRoom(client: Socket, room: string) {
+    client.join(room);
+  }
+
+  @SubscribeMessage('left_room')
+  async handleLeftRoom(client: Socket, room: string) {
+    client.leave(room);
   }
 
   @SubscribeMessage('create_room')
