@@ -5,6 +5,8 @@ import { GatewayModule } from './gateway/gateway.module';
 import { ConnectedUserModule } from './connected-user/connected-user.module';
 import { ChatTopicModule } from './chat-topic/chat-topic.module';
 import { UserChattopicModule } from './user-chattopic/user-chattopic.module';
+import { MessgesModule } from './messges/messges.module';
+import { MessagesService } from './messges/messages.service';
 import entities from './typeorm';
 
 @Module({
@@ -24,6 +26,8 @@ import entities from './typeorm';
     ConnectedUserModule,
     ChatTopicModule,
     UserChattopicModule,
+    MessgesModule,
   ],
+  providers: [MessagesService],
 })
 export class AppModule {}

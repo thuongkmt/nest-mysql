@@ -10,6 +10,7 @@ import {
 import { Socket, Server } from 'socket.io';
 import { ChattopicService } from 'src/chat-topic/chat-topic.service';
 import { ConnectedUserService } from 'src/connected-user/connected-user.service';
+import { MessagesService } from 'src/messges/messages.service';
 import { ChatTopic, ConnectedUser, User, UserChatTopic } from 'src/typeorm';
 import { PayloadMessage } from 'src/types/payload.message';
 import { PayloadRoom } from 'src/types/payload.room';
@@ -25,6 +26,7 @@ export class ChatGateway
     private userService: UserService,
     private chatTopicService: ChattopicService,
     private userChatTopicService: UserChattopicService,
+    private messageService: MessagesService,
   ) {}
 
   @WebSocketServer() server: Server;
@@ -43,15 +45,42 @@ export class ChatGateway
     this.logger.log(`${payload.chatTopic}: ${payload.message}`);
     //check ChatTopic whether or not existed?
     if (currentConnectedUserId && payload.chatTopic) {
-      this.server
-        .to(payload.chatTopic)
-        .emit('receive_message', payload.message);
+      const user = await this.userService.findById(currentConnectedUserId);
+      const chatTopic = await this.chatTopicService.getByTopic(
+        payload.chatTopic,
+      );
+      //save message into db
+      const message = await this.messageService.create({
+        text: payload.message,
+        datetime: new Date(Date.now()).toLocaleString(),
+        chatTopic: chatTopic,
+        user: user,
+      });
+      //emit back to the clients that in this rooms
+      this.server.to(payload.chatTopic).emit('receive_message', message);
     }
+  }
+
+  @SubscribeMessage('rooms')
+  async handleRooms(client: Socket) {
+    const userId = client.handshake.headers.userid.toString();
+    this.logger.log(`userId: ${userId}`);
+    const rooms = await this.userChatTopicService.findByUserId(
+      parseInt(userId),
+    );
+    this.logger.log(`rooms: ${rooms}`);
+    this.server.to(client.id).emit('rooms', rooms);
   }
 
   @SubscribeMessage('join_room')
   async handleJoinRoom(client: Socket, room: string) {
+    //response list of history message in db back of certain room_id
+    const chatTopic = await this.chatTopicService.getByTopic(room);
+    const messages = await this.messageService.findByUserAndChatTopic(
+      chatTopic.id,
+    );
     client.join(room);
+    client.to(client.id).emit('receive_message', messages);
   }
 
   @SubscribeMessage('left_room')
@@ -94,9 +123,9 @@ export class ChatGateway
   async handleConnection(socket: Socket, ..._args: any[]) {
     this.logger.log(`Client connected: ${socket.id}`);
     try {
-      //TODO: Will get user from JWT
-      //this.logger.log(client.handshake.headers);
-      const userUat: User = await this.userService.findById(1);
+      //TODO: Will get user from JWT through this.logger.log(socket.handshake.headers);
+      const userId = socket.handshake.headers.userid.toString();
+      const userUat: User = await this.userService.findById(parseInt(userId));
       await this.connectedUserService.create({
         socketId: socket.id,
         user: userUat,

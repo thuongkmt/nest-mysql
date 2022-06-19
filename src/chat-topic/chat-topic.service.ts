@@ -17,4 +17,8 @@ export class ChattopicService {
   async getById(id: number): Promise<ChatTopic> {
     return this.chattopicRepository.findOne({ where: { id: id } });
   }
+
+  async getByTopic(topic: string): Promise<ChatTopic> {
+    return this.chattopicRepository.findOne({ where: { topic: topic } });
+  }
 }
