@@ -12,6 +12,15 @@ export class Message {
   @Column()
   text: string;
 
+  @Column()
+  imgUrl: string;
+
+  @Column()
+  videoUrl: string;
+
+  @Column()
+  url: string;
+
   @Column({
     nullable: false,
   })
@@ -22,4 +31,9 @@ export class Message {
 
   @ManyToOne(() => User, (user) => user.messages)
   user: User;
+
+  @Column({
+    default: false,
+  })
+  isDelete: boolean;
 }

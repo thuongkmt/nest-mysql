@@ -1,4 +1,4 @@
-import { Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { ChatTopic } from './ChatTopic';
 import { User } from './User';
 
@@ -14,4 +14,9 @@ export class UserChatTopic {
 
   @ManyToOne(() => User, (user) => user.userChatTopics)
   user: User;
+
+  @Column({
+    default: false,
+  })
+  isDelete: boolean;
 }

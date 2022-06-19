@@ -18,4 +18,9 @@ export class ConnectedUser {
   @OneToOne(() => User)
   @JoinColumn()
   user: User;
+
+  @Column({
+    default: false,
+  })
+  isDelete: boolean;
 }

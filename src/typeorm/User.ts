@@ -30,4 +30,9 @@ export class User extends BaseEntity {
 
   @OneToMany(() => Message, (message) => message.user)
   messages: Message[];
+
+  @Column({
+    default: false,
+  })
+  isDelete: boolean;
 }

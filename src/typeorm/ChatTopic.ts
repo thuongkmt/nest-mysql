@@ -22,4 +22,9 @@ export class ChatTopic {
 
   @OneToMany(() => UserChatTopic, (userChatTopic) => userChatTopic.chatTopic)
   userChatTopics: UserChatTopic[];
+
+  @Column({
+    default: false,
+  })
+  isDelete: boolean;
 }
