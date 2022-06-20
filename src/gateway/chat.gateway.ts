@@ -10,8 +10,8 @@ import {
 import { Socket, Server } from 'socket.io';
 import { ChattopicService } from 'src/chat-topic/chat-topic.service';
 import { ConnectedUserService } from 'src/connected-user/connected-user.service';
-import { MessagesService } from 'src/messges/messages.service';
-import { ChatTopic, ConnectedUser, User, UserChatTopic } from 'src/typeorm';
+import { MessagesService } from 'src/messages/messages.service';
+import { ChatTopic, User, UserChatTopic } from 'src/typeorm';
 import { PayloadMessage } from 'src/types/payload.message';
 import { PayloadRoom } from 'src/types/payload.room';
 import { UserChattopicService } from 'src/user-chattopic/user-chattopic.service';
@@ -73,14 +73,18 @@ export class ChatGateway
   }
 
   @SubscribeMessage('join_room')
-  async handleJoinRoom(client: Socket, room: string) {
+  async handleJoinRoom(client: Socket, room: PayloadRoom) {
     //response list of history message in db back of certain room_id
-    const chatTopic = await this.chatTopicService.getByTopic(room);
+    const chatTopic = await this.chatTopicService.getByTopic(room.topic);
     const messages = await this.messageService.findByUserAndChatTopic(
       chatTopic.id,
     );
-    client.join(room);
-    client.to(client.id).emit('receive_message', messages);
+    client.join(room.topic);
+    //return data of room for user
+    this.server.to(room.topic).emit('receive_message', messages);
+    this.logger.log(
+      `Joined room ${room.topic} for message ${JSON.stringify(messages)}`,
+    );
   }
 
   @SubscribeMessage('left_room')

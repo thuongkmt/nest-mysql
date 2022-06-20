@@ -21,6 +21,9 @@ export class MessagesService {
   ): Promise<MessageEntity[]> {
     return this.messageRepository.find({
       where: { user: { id: userId }, chatTopic: { id: chatTopicId } },
+      take: 5,
+      skip: 0,
+      order: { datetime: 'DESC' },
     });
   }
 }

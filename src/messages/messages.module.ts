@@ -8,4 +8,4 @@ import { MessagesService } from './messages.service';
   providers: [MessagesService],
   exports: [TypeOrmModule, MessagesService],
 })
-export class MessgesModule {}
+export class MessagesModule {}
