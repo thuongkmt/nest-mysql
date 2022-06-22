@@ -1,6 +1,6 @@
 import { ChatTopic, User } from 'src/typeorm';
 
-export class IMessage {
+export interface IMessage {
   id?: number;
   text: string;
   datetime: string;

@@ -1,4 +1,4 @@
-export class PayloadRoom {
+export interface PayloadRoom {
   topic: string;
   userIds: string[];
 }

@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { IPaginationMeta, Pagination } from 'nestjs-typeorm-paginate';
 import { Message as MessageEntity } from 'src/typeorm';
-import { CommonResponse } from 'src/types/common-response.interface';
+import { CommonResponse } from 'src/types/common-response';
 import { IMessage } from 'src/types/message.interface';
+import { QueryOption } from 'src/types/query-option';
+import { QueryUserChatTopic } from 'src/types/query-user-chattopic.interface';
 import { Repository } from 'typeorm';
 
 @Injectable()
@@ -18,13 +19,12 @@ export class MessagesService {
   }
 
   async findByUserAndChatTopic(
-    chatTopicId: number,
-    userId?: number,
+    queryOption: QueryOption<QueryUserChatTopic>,
   ): Promise<CommonResponse<MessageEntity>> {
     const [results, total] = await this.messageRepository.findAndCount({
-      where: { user: { id: userId }, chatTopic: { id: chatTopicId } },
-      take: 5,
-      skip: 0,
+      where: { chatTopic: { id: queryOption.meta.chatTopicId } },
+      take: queryOption.pageSize,
+      skip: (queryOption.currentPage - 1) * queryOption.pageSize,
       order: { datetime: 'DESC' },
     });
     return new CommonResponse<MessageEntity>(results, total);

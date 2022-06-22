@@ -12,8 +12,10 @@ import { ChattopicService } from 'src/chat-topic/chat-topic.service';
 import { ConnectedUserService } from 'src/connected-user/connected-user.service';
 import { MessagesService } from 'src/messages/messages.service';
 import { ChatTopic, User, UserChatTopic } from 'src/typeorm';
-import { PayloadMessage } from 'src/types/payload.message';
-import { PayloadRoom } from 'src/types/payload.room';
+import { LoadMessage } from 'src/types/load-message.interface';
+import { PayloadMessage } from 'src/types/payload.message.interface';
+import { PayloadRoom } from 'src/types/payload.room.interface';
+import { QueryOption } from 'src/types/query-option';
 import { UserChattopicService } from 'src/user-chattopic/user-chattopic.service';
 import { UserService } from 'src/users/user.service';
 
@@ -61,6 +63,15 @@ export class ChatGateway
     }
   }
 
+  @SubscribeMessage('load_message')
+  async handleLoadMessage(client: Socket, payload: LoadMessage) {
+    const messages = await this.messageService.findByUserAndChatTopic(
+      new QueryOption({ chatTopicId: payload.topicId }, payload.currentPage),
+    );
+
+    this.server.to(payload.topic).emit('receive_message', messages);
+  }
+
   @SubscribeMessage('rooms')
   async handleRooms(client: Socket) {
     const userId = client.handshake.headers.userid.toString();
@@ -77,7 +88,7 @@ export class ChatGateway
     //response list of history message in db back of certain room_id
     const chatTopic = await this.chatTopicService.getByTopic(room.topic);
     const messages = await this.messageService.findByUserAndChatTopic(
-      chatTopic.id,
+      new QueryOption({ chatTopicId: chatTopic.id }, 1),
     );
     client.join(room.topic);
     //return data of room for user
