@@ -66,10 +66,15 @@ export class ChatGateway
   @SubscribeMessage('load_message')
   async handleLoadMessage(client: Socket, payload: LoadMessage) {
     const messages = await this.messageService.findByUserAndChatTopic(
-      new QueryOption({ chatTopicId: payload.topicId }, payload.currentPage),
+      new QueryOption(
+        { chatTopicId: payload.chatTopicId },
+        payload.currentPage,
+      ),
     );
 
-    this.server.to(payload.topic).emit('receive_message', messages);
+    this.server
+      .to(payload.chatTopicId.toString())
+      .emit('receive_message', messages);
   }
 
   @SubscribeMessage('rooms')
@@ -86,15 +91,18 @@ export class ChatGateway
   @SubscribeMessage('join_room')
   async handleJoinRoom(client: Socket, room: PayloadRoom) {
     //response list of history message in db back of certain room_id
-    const chatTopic = await this.chatTopicService.getByTopic(room.topic);
     const messages = await this.messageService.findByUserAndChatTopic(
-      new QueryOption({ chatTopicId: chatTopic.id }, 1),
+      new QueryOption({ chatTopicId: room.chatTopicId }, 1),
     );
-    client.join(room.topic);
+    client.join(room.chatTopicId.toString());
     //return data of room for user
-    this.server.to(room.topic).emit('receive_message', messages);
+    this.server
+      .to(room.chatTopicId.toString())
+      .emit('receive_message', messages);
     this.logger.log(
-      `Joined room ${room.topic} for message ${JSON.stringify(messages)}`,
+      `Joined room ${room.chatTopicId.toString()} for message ${JSON.stringify(
+        messages,
+      )}`,
     );
   }
 

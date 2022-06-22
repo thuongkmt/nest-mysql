@@ -1,5 +1,4 @@
 export interface LoadMessage {
-  topicId: number;
-  topic: string;
+  chatTopicId: number;
   currentPage: number;
 }

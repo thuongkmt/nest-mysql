@@ -1,6 +1,6 @@
 export class QueryOption<T> {
   /**Number item should be display at a page */
-  readonly pageSize: number = 10;
+  readonly pageSize: number = 5;
 
   /**CurrentPage is the current position of user on the page */
   readonly currentPage: number = 1;
