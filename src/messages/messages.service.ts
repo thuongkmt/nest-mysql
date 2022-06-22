@@ -18,7 +18,7 @@ export class MessagesService {
     return this.messageRepository.save(messageEntity);
   }
 
-  async findByUserAndChatTopic(
+  async findByChatTopic(
     queryOption: QueryOption<QueryUserChatTopic>,
   ): Promise<CommonResponse<MessageEntity>> {
     const [results, total] = await this.messageRepository.findAndCount({

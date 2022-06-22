@@ -16,14 +16,14 @@ export class User extends BaseEntity {
   id: number;
 
   @Column({
+    default: '',
+  })
+  rootUserId: string;
+
+  @Column({
     nullable: false,
   })
   username: string;
-
-  @Column({
-    default: '',
-  })
-  token: string;
 
   @OneToMany(() => UserChatTopic, (userChatTopic) => userChatTopic.user)
   userChatTopics: UserChatTopic[];

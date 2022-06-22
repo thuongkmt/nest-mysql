@@ -19,6 +19,7 @@ import { QueryOption } from 'src/types/query-option';
 import { UserChattopicService } from 'src/user-chattopic/user-chattopic.service';
 import { UserService } from 'src/users/user.service';
 import { JwtService } from '@nestjs/jwt';
+import { IUserToken } from 'src/types/user-token.interface';
 
 @WebSocketGateway({ cors: '*' })
 export class ChatGateway
@@ -67,7 +68,7 @@ export class ChatGateway
 
   @SubscribeMessage('load_message')
   async handleLoadMessage(client: Socket, payload: LoadMessage) {
-    const messages = await this.messageService.findByUserAndChatTopic(
+    const messages = await this.messageService.findByChatTopic(
       new QueryOption(
         { chatTopicId: payload.chatTopicId },
         payload.currentPage,
@@ -93,7 +94,7 @@ export class ChatGateway
   @SubscribeMessage('join_room')
   async handleJoinRoom(client: Socket, room: PayloadRoom) {
     //response list of history message in db back of certain room_id
-    const messages = await this.messageService.findByUserAndChatTopic(
+    const messages = await this.messageService.findByChatTopic(
       new QueryOption({ chatTopicId: room.chatTopicId }, 1),
     );
     client.join(room.chatTopicId.toString());
@@ -148,28 +149,12 @@ export class ChatGateway
   async handleConnection(socket: Socket, ..._args: any[]) {
     this.logger.log(`Client connected: ${socket.id}`);
     try {
-      //TODO: Will get user from JWT through this.logger.log(socket.handshake.headers);
-      const header = socket.handshake.headers;
-      this.logger.log(`header ${JSON.stringify(header)}`);
-      if (header['authorization']) {
-        try {
-          const authorization = header['authorization'].split(' ');
-          this.logger.log(`authorization: ${authorization}`);
-          if (authorization[0] == 'Bearer') {
-            const token = this.jwtTokenService.verify(authorization[1], {
-              secret: '8U2c3N2xkiRwFp',
-            });
-            this.logger.log(`token: ${JSON.stringify(token)}`);
-            /*const userUat: User = await this.userService.findById(parseInt(userId));
-            await this.connectedUserService.create({
-              socketId: socket.id,
-              user: userUat,
-            });*/
-          }
-        } catch (err) {
-          this.logger.log(`err: ${err}`);
-        }
-      }
+      //
+      /*const userUat: User = await this.userService.findById(parseInt(userId));
+           await this.connectedUserService.create({
+             socketId: socket.id,
+             user: userUat,
+           });*/
     } catch (ex: any) {
       this.logger.log(`exception: ${ex}`);
     }
@@ -190,5 +175,29 @@ export class ChatGateway
     );
 
     return currentConnectedUserId;
+  }
+
+  private async verifyToken(socket: Socket): Promise<IUserToken> {
+    //TODO: Will get user from JWT through this.logger.log(socket.handshake.headers);
+    const header = socket.handshake.headers;
+    this.logger.log(`header ${JSON.stringify(header)}`);
+    if (header['authorization']) {
+      try {
+        const authorization = header['authorization'].split(' ');
+        this.logger.log(`authorization: ${authorization}`);
+        if (authorization[0] == 'Bearer') {
+          const token: IUserToken = this.jwtTokenService.verify(
+            authorization[1],
+            {
+              secret: '8U2c3N2xkiRwFp',
+            },
+          );
+          this.logger.log(`token: ${JSON.stringify(token)}`);
+          return token;
+        }
+      } catch (err) {
+        this.logger.log(`err: ${err}`);
+      }
+    }
   }
 }

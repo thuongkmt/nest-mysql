@@ -1,5 +1,6 @@
 export interface IUser {
-  id: number;
+  id?: number;
+  rootUserId: string;
   username: string;
   tocken: string;
 }
