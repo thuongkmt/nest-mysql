@@ -16,7 +16,7 @@ export class User extends BaseEntity {
   id: number;
 
   @Column({
-    default: '',
+    nullable: false,
   })
   rootUserId: string;
 

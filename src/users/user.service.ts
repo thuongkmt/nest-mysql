@@ -18,4 +18,8 @@ export class UserService {
   async findById(id: number): Promise<UserEntity | null> {
     return this.userRepository.findOne({ where: { id } });
   }
+
+  async findByRootUserId(rootUserId: string): Promise<UserEntity | null> {
+    return this.userRepository.findOne({ where: { rootUserId } });
+  }
 }

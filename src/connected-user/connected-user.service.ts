@@ -16,10 +16,10 @@ export class ConnectedUserService {
     return this.connectedUserRepository.save(connectedUser);
   }
 
-  async findByUser(user: User): Promise<ConnectedUser[]> {
-    return this.connectedUserRepository.find({
+  async findByUser(userId: number): Promise<ConnectedUser> {
+    return this.connectedUserRepository.findOne({
       relations: ['user'],
-      where: { user: { id: user.id } },
+      where: { user: { id: userId } },
     });
   }
 

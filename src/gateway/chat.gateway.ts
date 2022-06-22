@@ -20,6 +20,7 @@ import { UserChattopicService } from 'src/user-chattopic/user-chattopic.service'
 import { UserService } from 'src/users/user.service';
 import { JwtService } from '@nestjs/jwt';
 import { IUserToken } from 'src/types/user-token.interface';
+import { IUser } from 'src/types/user.interface';
 
 @WebSocketGateway({ cors: '*' })
 export class ChatGateway
@@ -83,11 +84,11 @@ export class ChatGateway
   @SubscribeMessage('rooms')
   async handleRooms(client: Socket) {
     const userId = client.handshake.headers.userid.toString();
-    this.logger.log(`userId: ${userId}`);
+    this.logger.log(`[Infor][rooms] userId: ${userId}`);
     const rooms = await this.userChatTopicService.findByUserId(
       parseInt(userId),
     );
-    this.logger.log(`rooms: ${rooms}`);
+    this.logger.log(`[Infor][rooms]: get list of room: ${rooms}`);
     this.server.to(client.id).emit('rooms', rooms);
   }
 
@@ -103,7 +104,7 @@ export class ChatGateway
       .to(room.chatTopicId.toString())
       .emit('receive_message', messages);
     this.logger.log(
-      `Joined room ${room.chatTopicId.toString()} for message ${JSON.stringify(
+      `[Infor]: Joined room ${room.chatTopicId.toString()} for message ${JSON.stringify(
         messages,
       )}`,
     );
@@ -147,23 +148,53 @@ export class ChatGateway
   }
 
   async handleConnection(socket: Socket, ..._args: any[]) {
-    this.logger.log(`Client connected: ${socket.id}`);
     try {
-      //
-      /*const userUat: User = await this.userService.findById(parseInt(userId));
-           await this.connectedUserService.create({
-             socketId: socket.id,
-             user: userUat,
-           });*/
+      this.logger.log(`[Infor]: Client connected ${socket.id}`);
+      //get token
+      const userToken = await this.verifyToken(socket);
+      //verify token
+      if (userToken) {
+        //check user if exist or not
+        const exitedUser = await this.userService.findByRootUserId(
+          userToken.userId,
+        );
+        this.logger.log(`[infor]: exitedUser ${JSON.stringify(exitedUser)}`);
+        let currentUser: IUser;
+        if (exitedUser) {
+          currentUser = exitedUser;
+        } else {
+          const newUser = await this.userService.create({
+            rootUserId: userToken.userId,
+            username: userToken.username,
+          });
+          currentUser = newUser;
+        }
+        //check connectedUser exist or not
+        const connectedUser = await this.connectedUserService.findByUser(
+          currentUser.id,
+        );
+        if (connectedUser) {
+          //update
+          connectedUser.socketId = socket.id;
+          await this.connectedUserService.create(connectedUser);
+        } else {
+          //save session for current user
+          await this.connectedUserService.create({
+            socketId: socket.id,
+            user: currentUser,
+          });
+        }
+      } else {
+        this.server.disconnectSockets(true);
+      }
     } catch (ex: any) {
       this.logger.log(`exception: ${ex}`);
     }
   }
 
   async handleDisconnect(socket: Socket) {
-    this.logger.log(`Client disconnected: ${socket.id}`);
     const data = await this.connectedUserService.deleteConnectedUser(socket.id);
-    this.logger.log(`${JSON.stringify(data)}`);
+    this.logger.log(`[infor]: Client disconnected ${JSON.stringify(data)}`);
   }
 
   private async checkConnectedUser(socketId: string): Promise<number> {
@@ -177,14 +208,12 @@ export class ChatGateway
     return currentConnectedUserId;
   }
 
-  private async verifyToken(socket: Socket): Promise<IUserToken> {
+  private async verifyToken(socket: Socket): Promise<IUserToken | null> {
     //TODO: Will get user from JWT through this.logger.log(socket.handshake.headers);
     const header = socket.handshake.headers;
-    this.logger.log(`header ${JSON.stringify(header)}`);
     if (header['authorization']) {
       try {
         const authorization = header['authorization'].split(' ');
-        this.logger.log(`authorization: ${authorization}`);
         if (authorization[0] == 'Bearer') {
           const token: IUserToken = this.jwtTokenService.verify(
             authorization[1],
@@ -192,12 +221,17 @@ export class ChatGateway
               secret: '8U2c3N2xkiRwFp',
             },
           );
-          this.logger.log(`token: ${JSON.stringify(token)}`);
+          this.logger.log(`[infor]: token ${JSON.stringify(token)}`);
           return token;
         }
       } catch (err) {
-        this.logger.log(`err: ${err}`);
+        this.logger.log(`[error]: ${err}`);
+        this.server.to(`${socket.id}`).emit('error', err.message);
+        return null;
       }
+    } else {
+      this.logger.log(`[infor]: Not authrized`);
+      this.server.to(`${socket.id}`).emit('error', 'Not authrized');
     }
   }
 }
