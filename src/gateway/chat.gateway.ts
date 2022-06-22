@@ -18,6 +18,7 @@ import { PayloadRoom } from 'src/types/payload.room.interface';
 import { QueryOption } from 'src/types/query-option';
 import { UserChattopicService } from 'src/user-chattopic/user-chattopic.service';
 import { UserService } from 'src/users/user.service';
+import { JwtService } from '@nestjs/jwt';
 
 @WebSocketGateway({ cors: '*' })
 export class ChatGateway
@@ -29,6 +30,7 @@ export class ChatGateway
     private chatTopicService: ChattopicService,
     private userChatTopicService: UserChattopicService,
     private messageService: MessagesService,
+    private jwtTokenService: JwtService,
   ) {}
 
   @WebSocketServer() server: Server;
@@ -147,12 +149,27 @@ export class ChatGateway
     this.logger.log(`Client connected: ${socket.id}`);
     try {
       //TODO: Will get user from JWT through this.logger.log(socket.handshake.headers);
-      const userId = socket.handshake.headers.userid.toString();
-      const userUat: User = await this.userService.findById(parseInt(userId));
-      await this.connectedUserService.create({
-        socketId: socket.id,
-        user: userUat,
-      });
+      const header = socket.handshake.headers;
+      this.logger.log(`header ${JSON.stringify(header)}`);
+      if (header['authorization']) {
+        try {
+          const authorization = header['authorization'].split(' ');
+          this.logger.log(`authorization: ${authorization}`);
+          if (authorization[0] == 'Bearer') {
+            const token = this.jwtTokenService.verify(authorization[1], {
+              secret: '8U2c3N2xkiRwFp',
+            });
+            this.logger.log(`token: ${JSON.stringify(token)}`);
+            /*const userUat: User = await this.userService.findById(parseInt(userId));
+            await this.connectedUserService.create({
+              socketId: socket.id,
+              user: userUat,
+            });*/
+          }
+        } catch (err) {
+          this.logger.log(`err: ${err}`);
+        }
+      }
     } catch (ex: any) {
       this.logger.log(`exception: ${ex}`);
     }

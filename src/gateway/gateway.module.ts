@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { ChatTopicModule } from 'src/chat-topic/chat-topic.module';
 import { ConnectedUserModule } from 'src/connected-user/connected-user.module';
 import { MessagesModule } from 'src/messages/messages.module';
@@ -14,6 +15,6 @@ import { ChatGateway } from './chat.gateway';
     UserChattopicModule,
     MessagesModule,
   ],
-  providers: [ChatGateway],
+  providers: [ChatGateway, JwtService],
 })
 export class GatewayModule {}
