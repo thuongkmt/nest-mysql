@@ -12,13 +12,22 @@ export class Message {
   @Column()
   text: string;
 
-  @Column()
+  @Column({
+    default: null,
+    nullable: true,
+  })
   imgUrl: string;
 
-  @Column()
+  @Column({
+    default: null,
+    nullable: true,
+  })
   videoUrl: string;
 
-  @Column()
+  @Column({
+    default: null,
+    nullable: true,
+  })
   url: string;
 
   @Column({

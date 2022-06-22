@@ -48,12 +48,12 @@ export class ChatGateway
     const socketId: string = client.id;
     const currentConnectedUserId = await this.checkConnectedUser(socketId);
     //check payload
-    this.logger.log(`${payload.chatTopic}: ${payload.message}`);
+    this.logger.log(`${payload.chatTopicId}: ${payload.message}`);
     //check ChatTopic whether or not existed?
-    if (currentConnectedUserId && payload.chatTopic) {
+    if (currentConnectedUserId && payload.chatTopicId) {
       const user = await this.userService.findById(currentConnectedUserId);
-      const chatTopic = await this.chatTopicService.getByTopic(
-        payload.chatTopic,
+      const chatTopic = await this.chatTopicService.getById(
+        payload.chatTopicId,
       );
       //save message into db
       const message = await this.messageService.create({
@@ -63,7 +63,9 @@ export class ChatGateway
         user: user,
       });
       //emit back to the clients that in this rooms
-      this.server.to(payload.chatTopic).emit('receive_message', message);
+      this.server
+        .to(payload.chatTopicId.toString())
+        .emit('receive_message', message);
     }
   }
 

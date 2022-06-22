@@ -1,4 +1,4 @@
 export interface PayloadMessage {
-  chatTopic: string;
+  chatTopicId: number;
   message: string;
 }
