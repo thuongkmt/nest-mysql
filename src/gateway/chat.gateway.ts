@@ -144,9 +144,9 @@ export class ChatGateway
           userChatTopic.user = user;
           await this.userChatTopicService.create(userChatTopic);
         }
+        this.server.to(`${socketId}`).emit('create_room', chatTopicResult.id);
       }
     }
-    this.server.to(`${socketId}`).emit('hey', 'You are created new chat-topic');
   }
 
   async handleConnection(socket: Socket, ..._args: any[]) {
