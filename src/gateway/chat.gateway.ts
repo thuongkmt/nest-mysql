@@ -85,13 +85,20 @@ export class ChatGateway
 
   @SubscribeMessage('rooms')
   async handleRooms(client: Socket) {
-    const userId = client.handshake.headers.userid.toString();
-    this.logger.log(`[Infor][rooms] userId: ${userId}`);
-    const rooms = await this.userChatTopicService.findByUserId(
-      parseInt(userId),
-    );
-    this.logger.log(`[Infor][rooms]: get list of room: ${rooms}`);
-    this.server.to(client.id).emit('rooms', rooms);
+    const currentConnectedUserId = await this.checkConnectedUser(client.id);
+    if (currentConnectedUserId) {
+      this.logger.log(`[Infor][rooms] UserId: ${currentConnectedUserId}`);
+      const rooms = await this.userChatTopicService.findByUserId(
+        currentConnectedUserId,
+      );
+      this.logger.log(
+        `[Infor][rooms] Get list of room: ${JSON.stringify(rooms)}`,
+      );
+      this.server.to(client.id).emit('rooms', rooms);
+    } else {
+      this.logger.log(`[Infor][rooms] User is not connected`);
+      this.server.to(`${client.id}`).emit('error', 'User is not connected');
+    }
   }
 
   @SubscribeMessage('join_room')
@@ -127,24 +134,34 @@ export class ChatGateway
     const currentConnectedUserId = await this.checkConnectedUser(socketId);
     if (currentConnectedUserId) {
       //create ChatTopic
-      const userIds = payload.userIds.toString().split(',');
+      const userRootIds = payload.userIds.toString().split(',');
       let chatTopicName = '';
-      userIds.forEach((x) => {
-        chatTopicName += x;
-      });
+
+      for (const userRootId of userRootIds) {
+        chatTopicName += `${userRootId}_`;
+      }
+      if (chatTopicName.length > 0) {
+        chatTopicName.substring(chatTopicName.length - 1, chatTopicName.length);
+        this.logger.log(
+          `[Infor][create_room] new chatTopicName: ${chatTopicName}`,
+        );
+      }
       const chatTopic = new ChatTopic();
       chatTopic.topic = chatTopicName;
       const chatTopicResult = await this.chatTopicService.create(chatTopic);
       //create user in the chatTopic
       if (chatTopicResult) {
-        for (const userId of userIds) {
-          const user = await this.userService.findById(parseInt(userId));
+        for (const userRootId of userRootIds) {
+          //check user was synced or not
+          const user = await this.userService.findByRootUserId(userRootId);
           const userChatTopic = new UserChatTopic();
           userChatTopic.chatTopic = chatTopicResult;
           userChatTopic.user = user;
           await this.userChatTopicService.create(userChatTopic);
         }
-        this.server.to(`${socketId}`).emit('create_room', chatTopicResult.id);
+        this.server
+          .to(`${socketId}`)
+          .emit('create_room', `New room with id: ${chatTopicResult.id}`);
       }
     }
   }
@@ -155,6 +172,7 @@ export class ChatGateway
       //get token
       const userToken = await this.verifyToken(socket);
       //verify token
+      this.logger.log(`[Infor]: token ${userToken}`);
       if (userToken) {
         //check user if exist or not
         const exitedUser = await this.userService.findByRootUserId(
@@ -213,6 +231,7 @@ export class ChatGateway
   private async verifyToken(socket: Socket): Promise<IUserToken | null> {
     //TODO: Will get user from JWT through this.logger.log(socket.handshake.headers);
     const header = socket.handshake.headers;
+    this.logger.log(`[infor]: headers ${JSON.stringify(header)}`);
     if (header['authorization']) {
       try {
         const authorization = header['authorization'].split(' ');
@@ -225,9 +244,14 @@ export class ChatGateway
           );
           this.logger.log(`[infor]: token ${JSON.stringify(token)}`);
           return token;
+        } else {
+          this.logger.log(`[infor]: Jwt is not right format!`);
+          this.server
+            .to(`${socket.id}`)
+            .emit('error', 'Jwt is not right format!');
         }
       } catch (err) {
-        this.logger.log(`[error]: ${err}`);
+        this.logger.error(`[error]: ${err}`);
         this.server.to(`${socket.id}`).emit('error', err.message);
         return null;
       }
